@@ -68,8 +68,9 @@ export const createRealGumroadProduct = async (
     // Launch browser with better settings
     const launcher: any = getLauncher();
     const userDataDir = path.join(process.cwd(), '.gumroad_profile');
+    const headless = process.env.PUPPETEER_HEADLESS !== 'false';
     const launchOptions: any = {
-      headless: false,
+      headless,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -82,8 +83,11 @@ export const createRealGumroadProduct = async (
       defaultViewport: { width: 1366, height: 768 }
     };
     
+    // Prefer CHROME_PATH, then PUPPETEER_EXECUTABLE_PATH if provided
     if (process.env.CHROME_PATH) {
       launchOptions.executablePath = process.env.CHROME_PATH;
+    } else if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     }
     
     browser = await (launcher && typeof launcher.launch === 'function'

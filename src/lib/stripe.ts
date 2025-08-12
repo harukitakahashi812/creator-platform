@@ -17,9 +17,8 @@ if (isTestMode) {
   console.error('❌ Invalid Stripe secret key format. Must start with sk_test_ or sk_live_');
 }
 
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-07-30.basil',
-}) : null;
+// Use Stripe's default API version for compatibility unless you need a pinned version
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 export const createCheckoutSession = async (projectId: string, projectTitle: string, price: number) => {
   console.log('🤖 Stripe checkout session creation started:', { projectId, projectTitle, price });
