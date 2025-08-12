@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import puppeteer from 'puppeteer';
 
+// Ensure Node.js runtime on Vercel and avoid edge
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 function getLauncher() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
