@@ -7,6 +7,16 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '1mb' }));
 
+// Simple health endpoint so external checks won't 404
+app.get('/health', (_req, res) => {
+  res.status(200).json({ ok: true, service: 'gumroad-worker', version: 1 });
+});
+
+// Root route also returns a simple message (useful for quick curl tests)
+app.get('/', (_req, res) => {
+  res.status(200).send('gumroad-worker online');
+});
+
 function auth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const expected = process.env.GUMROAD_WORKER_TOKEN;
   if (!expected) return next();

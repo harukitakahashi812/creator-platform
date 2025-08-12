@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -50,5 +50,13 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SuccessContent />
+    </Suspense>
   );
 }
