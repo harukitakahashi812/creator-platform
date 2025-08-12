@@ -28,6 +28,9 @@ export interface GumroadProductData {
   price: number;
   category: string;
   fileUrl?: string;
+  // Subscription
+  isSubscription?: boolean;
+  interval?: 'month' | 'year';
 }
 
 export interface GumroadCreateResult {
@@ -167,6 +170,25 @@ export const createRealGumroadProduct = async (
       await page.type('input[placeholder*="price" i], input[name="price"], input[type="number"], [aria-label*="price" i]', String(productData.price), { delay: 50 });
     }
     
+    // If subscription: toggle recurring billing
+    if (productData.isSubscription) {
+      try {
+        await page.evaluate((interval) => {
+          const labels = Array.from(document.querySelectorAll('label, span, div, button')) as HTMLElement[];
+          const recurring = labels.find(el => /recurring|subscription|charge every/i.test(el.textContent || '')) as HTMLElement | undefined;
+          if (recurring) (recurring as any).click?.();
+          // Try to pick interval if visible
+          const selects = Array.from(document.querySelectorAll('select')) as HTMLSelectElement[];
+          const intervalSelect = selects.find(s => /interval|billing/i.test(s.name || s.id || ''));
+          if (intervalSelect) {
+            intervalSelect.value = interval === 'year' ? 'year' : 'month';
+            intervalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }, productData.interval || 'month');
+        await new Promise(r => setTimeout(r, 1000));
+      } catch {}
+    }
+
     // Select digital product type
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button, [role="button"], div')) as HTMLElement[];

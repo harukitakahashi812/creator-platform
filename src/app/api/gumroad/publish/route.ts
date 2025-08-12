@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectById, updateProjectStatus, getGumroadCredentials } from '@/lib/firebase';
 import { createRealGumroadProduct, validateRealGumroadProduct } from '@/lib/gumroad-automation';
+import { publishViaWorker } from '@/lib/gumroad-worker-client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,13 +101,27 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const gumroadResult = await createRealGumroadProduct({
-      name: project.title,
-      description: project.description,
-      price: project.price,
-      category: project.projectType,
-      fileUrl: project.googleDriveLink
-    }, credentials);
+    // Prefer remote worker in production if configured
+    const useWorker = !!process.env.GUMROAD_WORKER_URL;
+    const gumroadResult = useWorker
+      ? await publishViaWorker({
+          name: project.title,
+          description: project.description,
+          price: project.price,
+          category: project.projectType,
+          fileUrl: project.googleDriveLink,
+          isSubscription: project.isSubscription ?? false,
+          interval: project.interval ?? undefined,
+        }, credentials)
+      : await createRealGumroadProduct({
+          name: project.title,
+          description: project.description,
+          price: project.price,
+          category: project.projectType,
+          fileUrl: project.googleDriveLink,
+          isSubscription: project.isSubscription ?? false,
+          interval: project.interval ?? undefined,
+        }, credentials);
 
     if (gumroadResult.success) {
       console.log('✅ Gumroad product creation successful:', gumroadResult.message);

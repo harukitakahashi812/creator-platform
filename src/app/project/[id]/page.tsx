@@ -115,6 +115,8 @@ export default function ProjectPage() {
 
   // Use a fallback price if missing
   const displayPrice = typeof project.price === 'number' && !isNaN(project.price) ? project.price : 10;
+  const isSubscription = (project as any).isSubscription === true;
+  const interval = ((project as any).interval as 'month' | 'year') || 'month';
 
   // Check if current user is the owner
   const isOwner = user && project.userId && user.uid === project.userId;
@@ -191,7 +193,9 @@ export default function ProjectPage() {
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200 hover:shadow-lg transition-shadow">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure Checkout</h3>
                       <p className="text-gray-700 mb-4">Pay securely with credit card via Stripe</p>
-                      <div className="text-2xl font-bold text-blue-600 mb-4">${displayPrice.toFixed(2)}</div>
+                      <div className="text-2xl font-bold text-blue-600 mb-4">
+                        ${displayPrice.toFixed(2)}{isSubscription ? ` / ${interval}` : ''}
+                      </div>
                       <button
                         onClick={handleStripeCheckout}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition font-medium shadow-md"

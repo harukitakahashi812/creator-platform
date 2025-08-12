@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Starting project verification...');
     
-    const { projectId, title, description, projectType, googleDriveLink, gumroadLink, deadline } = await request.json();
+    const { projectId, title, description, projectType, googleDriveLink, gumroadLink, deadline, isSubscription, interval } = await request.json();
 
     console.log('📋 Verification request data:', {
       projectId,

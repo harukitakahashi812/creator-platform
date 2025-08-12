@@ -11,8 +11,14 @@ export async function GET() {
         hasApiKey: !!process.env.OPENAI_API_KEY,
       },
       gumroad: {
-        status: 'automatic', // Automatic integration active
-        message: 'Automatic Gumroad publishing active - REAL products created'
+        status: process.env.GUMROAD_WORKER_URL ? 'worker' : 'automatic',
+        message: process.env.GUMROAD_WORKER_URL
+          ? 'Gumroad publishing via remote worker'
+          : 'Automatic Gumroad publishing active - REAL products created'
+      },
+      openaiStartupFund: {
+        implemented: false,
+        note: 'No official API integration. Use receipts and URLs for application.'
       }
     };
 

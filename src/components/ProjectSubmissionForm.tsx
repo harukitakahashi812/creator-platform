@@ -20,6 +20,8 @@ export default function ProjectSubmissionForm({ onProjectSubmitted }: { onProjec
   const [price, setPrice] = useState(10);
 
   const [deadline, setDeadline] = useState('');
+  const [isSubscription, setIsSubscription] = useState(false);
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
   const [showGumroadPublishing, setShowGumroadPublishing] = useState(false);
   const [approvedProject, setApprovedProject] = useState<any>(null);
 
@@ -50,6 +52,8 @@ export default function ProjectSubmissionForm({ onProjectSubmitted }: { onProjec
         googleDriveLink,
         projectType,
         price, // Save price
+        isSubscription,
+        interval: isSubscription ? interval : undefined,
         deadline, // Add deadline
         status: 'pending',
         userId: user.uid,
@@ -82,6 +86,8 @@ export default function ProjectSubmissionForm({ onProjectSubmitted }: { onProjec
             description,
             projectType,
             googleDriveLink: hasDrive ? googleDriveLink : '',
+            isSubscription,
+            interval: isSubscription ? interval : undefined,
             deadline,
           }),
         });
@@ -119,6 +125,8 @@ export default function ProjectSubmissionForm({ onProjectSubmitted }: { onProjec
       setGoogleDriveLink('');
       setProjectType('Elementor');
       setPrice(10);
+      setIsSubscription(false);
+      setInterval('month');
 
       setDeadline('');
       // Trigger refresh of project list with a small delay to ensure Firestore is updated
@@ -210,6 +218,33 @@ export default function ProjectSubmissionForm({ onProjectSubmitted }: { onProjec
             disabled={!user}
             required
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+              <input
+                type="checkbox"
+                checked={isSubscription}
+                onChange={(e) => setIsSubscription(e.target.checked)}
+                className="h-4 w-4"
+                disabled={!user}
+              />
+              Make this a subscription
+            </label>
+            <p className="text-xs text-slate-500">If enabled, buyers will be charged recurringly.</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Billing Interval</label>
+            <select
+              value={interval}
+              onChange={(e) => setInterval(e.target.value as 'month' | 'year')}
+              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-black font-medium bg-white"
+              disabled={!user || !isSubscription}
+            >
+              <option value="month">Monthly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Deadline (Optional)</label>

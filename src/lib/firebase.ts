@@ -91,6 +91,9 @@ export interface Project {
   googleDriveLink: string;
   projectType: 'Elementor' | 'Graphic Design' | 'Video';
   price: number;
+  // Subscription support
+  isSubscription?: boolean;
+  interval?: 'month' | 'year';
   gumroadLink?: string;
   deadline?: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -127,6 +130,9 @@ export const addProject = async (project: Omit<Project, 'id' | 'createdAt' | 'up
       const projectData = {
         ...project,
         price: project.price,
+        // Ensure optional subscription fields persist
+        isSubscription: project.isSubscription ?? false,
+        interval: project.interval ?? undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -190,6 +196,8 @@ export const getProjectById = async (projectId: string) => {
         id: docSnap.id,
         ...data,
         price: data.price,
+        isSubscription: data.isSubscription ?? false,
+        interval: data.interval ?? undefined,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
       } as Project;
