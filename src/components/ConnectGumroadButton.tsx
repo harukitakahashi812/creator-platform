@@ -3,22 +3,24 @@
 import { useState } from 'react';
 
 export default function ConnectGumroadButton() {
-  const [status, setStatus] = useState<'idle' | 'opening' | 'success' | 'error'>('idle');
-  const [error, setError] = useState('');
+	const [status, setStatus] = useState<'idle' | 'opening' | 'success' | 'error'>('idle');
+	const [error, setError] = useState('');
+	const [message, setMessage] = useState('');
 
   const handleOpen = async () => {
     setStatus('opening');
     setError('');
-    try {
-      const res = await fetch('/api/gumroad/connect', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setStatus('success');
-      } else {
-        setStatus('error');
-        setError(data.error || 'Failed to open window');
-      }
-    } catch (e: any) {
+		try {
+			const res = await fetch('/api/gumroad/connect', { method: 'POST' });
+			const data = await res.json();
+			if (data.success) {
+				setStatus('success');
+				setMessage(data.message || 'Window opened. Please log in once, then close it.');
+			} else {
+				setStatus('error');
+				setError(data.error || 'Failed to open window');
+			}
+		} catch (e: any) {
       setStatus('error');
       setError(e?.message || 'Failed to open window');
     }
@@ -33,11 +35,11 @@ export default function ConnectGumroadButton() {
       >
         {status === 'opening' ? 'Opening…' : 'Open Gumroad Login Window'}
       </button>
-      {status === 'success' && (
-        <div className="mt-3 p-3 rounded border border-green-200 bg-green-50 text-green-700 text-sm">
-          Window opened. Please log in once, then close it.
-        </div>
-      )}
+		{status === 'success' && (
+			<div className="mt-3 p-3 rounded border border-green-200 bg-green-50 text-green-700 text-sm">
+				{message || 'Window opened. Please log in once, then close it.'}
+			</div>
+		)}
       {status === 'error' && (
         <div className="mt-3 p-3 rounded border border-red-200 bg-red-50 text-red-700 text-sm">
           {error}
