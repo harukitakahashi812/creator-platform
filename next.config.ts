@@ -9,19 +9,18 @@ const nextConfig: NextConfig = {
   },
   // Avoid bundling heavy Chromium automation libs; keep them as runtime dependencies
   serverExternalPackages: [
+    // Externalize heavy puppeteer libs so Vercel doesn't try to bundle them
     "puppeteer",
     "puppeteer-extra",
     "puppeteer-extra-plugin-stealth",
-    "clone-deep",
-    "merge-deep",
+    // Avoid loading stealth evasion subpaths on Vercel (cause cannot find module errors)
+    // We'll only load puppeteer on the VPS worker.
   ],
   webpack: (config) => {
     const externals = [
       "puppeteer",
       "puppeteer-extra",
       "puppeteer-extra-plugin-stealth",
-      "clone-deep",
-      "merge-deep",
     ];
     // Ensure these packages are treated as runtime commonjs requires
     const asCommonJs = externals.reduce<Record<string, string>>((acc, name) => {
