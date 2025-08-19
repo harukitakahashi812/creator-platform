@@ -88,3 +88,4 @@ SUPPORT:
 - Config page shows system health and settings
 
 This is a real automation system - no fake URLs or simulated products. When a project is approved, a real Gumroad product gets created that customers can actually buy.
+
