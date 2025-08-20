@@ -1,78 +1,198 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Creator Platform - Complete Project Management System
 
-## Getting Started
+A modern, AI-powered platform for creators to submit projects, get verified, and earn funding through offerwalls before publishing to Gumroad.
 
-First, run the development server:
+## 🚀 Features
 
+### For Creators
+- **Project Submission**: Submit projects with deadlines and descriptions
+- **File Upload**: Upload project files or add Google Drive links
+- **AI Verification**: Automatic project quality verification using GPT-4
+- **Offerwall Integration**: Earn money through surveys, app installs, and offers
+- **Funding Progress**: Track earnings towards your project goal
+- **Auto-Publishing**: Automatic Gumroad publishing when funding target is reached
+
+### For Admins
+- **Admin Dashboard**: Manage all projects and oversee workflow
+- **Project Review**: Approve/reject projects after AI verification
+- **Status Management**: Track project progress through all stages
+- **Funding Monitoring**: Monitor offerwall earnings and project funding
+
+## 🔄 Complete Workflow
+
+### 1. Project Submission
+1. Creator submits project with title, description, type, price, and deadline
+2. Project status: `pending`
+
+### 2. File Upload
+1. Creator uploads project files or adds Google Drive link
+2. System marks project as `hasFiles: true`
+
+### 3. AI Verification
+1. Creator clicks "Submit for AI Verification"
+2. GPT-4 analyzes project quality and completeness
+3. Project status changes to `approved` or `rejected`
+
+### 4. Offerwall Funding (if approved)
+1. Creator opens offerwall to complete offers
+2. Earn money through surveys, app installs, signups
+3. Earnings automatically tracked in `fundedAmount`
+4. Progress bar shows funding status
+
+### 5. Auto-Publishing (when funded)
+1. When `fundedAmount >= price`, project status becomes `funded`
+2. System automatically publishes to Gumroad
+3. Creator receives Gumroad link
+
+## 🛠️ Technical Stack
+
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Firebase
+- **Database**: Firestore
+- **Authentication**: Firebase Auth
+- **AI**: OpenAI GPT-4
+- **Hosting**: Vercel (main app) + VPS (Gumroad worker)
+- **Offerwall**: Clixwall integration
+
+## 📁 Project Structure
+
+```
+creator-platform/
+├── src/
+│   ├── app/
+│   │   ├── admin/           # Admin dashboard
+│   │   ├── dashboard/       # User dashboard
+│   │   ├── project/[id]/    # Individual project page
+│   │   ├── offerwall/       # Offerwall integration
+│   │   └── api/             # API routes
+│   ├── components/          # React components
+│   └── lib/                 # Firebase, Stripe, etc.
+├── gumroad-worker/          # VPS worker for Gumroad automation
+└── README.md
+```
+
+## 🚀 Deployment
+
+### Main App (Vercel)
+1. Connect GitHub repository to Vercel
+2. Set environment variables:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=...
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+   NEXT_PUBLIC_FIREBASE_APP_ID=...
+   OPENAI_API_KEY=...
+   STRIPE_SECRET_KEY=...
+   STRIPE_PUBLISHABLE_KEY=...
+   ```
+
+### Gumroad Worker (VPS)
+1. Deploy to Ubuntu VPS
+2. Install dependencies: `npm ci --include=dev`
+3. Set environment variables:
+   ```
+   GUMROAD_EMAIL=...
+   GUMROAD_PASSWORD=...
+   GUMROAD_WORKER_TOKEN=...
+   ```
+4. Run with PM2: `pm2 start npm --name "gumroad-worker" -- run worker`
+
+## 🔑 Environment Variables
+
+### Required for Main App
+- `NEXT_PUBLIC_FIREBASE_*`: Firebase configuration
+- `OPENAI_API_KEY`: OpenAI API key for AI verification
+- `STRIPE_*`: Stripe payment processing
+
+### Required for VPS Worker
+- `GUMROAD_EMAIL`: Gumroad account email
+- `GUMROAD_PASSWORD`: Gumroad account password
+- `GUMROAD_WORKER_TOKEN`: Security token for worker communication
+
+## 📱 Usage Guide
+
+### For Creators
+1. **Sign up/Login**: Create account or sign in
+2. **Submit Project**: Fill out project form with details
+3. **Upload Files**: Add project files or Google Drive link
+4. **Get Verified**: Submit for AI verification
+5. **Earn Funding**: Complete offers through offerwall
+6. **Publish**: Project automatically publishes when funded
+
+### For Admins
+1. **Access Admin Panel**: Navigate to `/admin`
+2. **Review Projects**: See all pending projects
+3. **Manage Status**: Approve/reject projects
+4. **Monitor Progress**: Track funding and completion
+
+## 🔒 Security Features
+
+- Firebase Authentication
+- API route protection
+- Worker token verification
+- Input validation and sanitization
+- Rate limiting on API endpoints
+
+## 🚧 Development
+
+### Local Development
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Environment Variables
-
-Create a `.env.local` file in the root of the project with the following content:
-
-```
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-
-# Stripe Configuration
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
-
-# OpenAI Configuration
-OPENAI_API_KEY=sk-proj-your_openai_api_key_here
+### Building for Production
+```bash
+npm run build
+npm start
 ```
 
-**Setup Instructions:**
-1. Create a Firebase project and add your configuration
-2. Set up Stripe account and add your test keys
-3. Get an OpenAI API key and add it to the environment variables
+### Worker Development
+```bash
+cd gumroad-worker
+npm install
+npm run dev
+```
 
-## Features
+## 📊 Project Statuses
 
-- **User Authentication**: Firebase Authentication with email/password
-- **Project Submission**: Submit creative projects with Google Drive or Gumroad links
-- **AI Verification**: OpenAI GPT-4 verifies project quality and completeness
-- **Payment Integration**: Stripe checkout and Gumroad payment options
-- **Project Management**: Dashboard for creators to manage their projects
-- **Public Browse**: Browse and purchase approved projects
-- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
+- `pending`: Project submitted, waiting for files and verification
+- `approved`: AI verification passed, ready for funding
+- `rejected`: AI verification failed, needs revision
+- `funded`: Funding target reached, published to Gumroad
 
-## Learn More
+## 💡 Tips for Success
 
-To learn more about Next.js, take a look at the following resources:
+### For Creators
+- Provide detailed project descriptions
+- Upload high-quality project files
+- Complete offers honestly for better approval rates
+- Check back daily for new high-paying offers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### For Admins
+- Monitor project quality through AI verification
+- Review rejected projects for improvement opportunities
+- Track funding progress across all projects
+- Ensure smooth workflow from submission to publication
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🆘 Support
 
-## Deploy on Vercel
+For technical issues or questions:
+1. Check the admin dashboard for project status
+2. Review Firebase console for database issues
+3. Check VPS logs for worker problems
+4. Verify environment variables are set correctly
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔄 Updates
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The system automatically:
+- Tracks offerwall earnings
+- Updates project funding progress
+- Publishes projects when funded
+- Manages project lifecycle
 
-### Vercel Notes
+---
 
-- Ensure environment variables are configured in Vercel (Firebase, Stripe, OpenAI).
-- Puppeteer-based API route `src/app/api/gumroad/connect/route.ts` explicitly opts into Node.js runtime and dynamic rendering on Vercel.
-- The build targets Node 18+ (see `engines` in `package.json`).
+**Built with ❤️ for creators who want to monetize their projects through community engagement and offer completion.**

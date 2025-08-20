@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProjectSubmissionForm from '@/components/ProjectSubmissionForm';
 import ProjectList from '@/components/ProjectList';
-import { signOutUser } from '@/lib/firebase';
+import { signOutUser, getProjects } from '@/lib/firebase';
+import { Project } from '@/lib/firebase';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -14,12 +15,29 @@ export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjectForm, setShowProjectForm] = useState(false);
 
   useEffect(() => {
     if (!loading && !user && pathname !== '/') {
       router.replace('/login');
     }
   }, [user, loading, router, pathname]);
+
+  useEffect(() => {
+    if (user) {
+      loadProjects();
+    }
+  }, [user, refreshTrigger]);
+
+  const loadProjects = async () => {
+    try {
+      const projectsData = await getProjects();
+      setProjects(projectsData);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOutUser();
@@ -73,6 +91,83 @@ export default function DashboardPage() {
       
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Project Status Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <span className="text-blue-600 text-2xl">📁</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter(p => p.status === 'pending').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <span className="text-green-600 text-2xl">✅</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Approved</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter(p => p.status === 'approved').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <span className="text-purple-600 text-2xl">💰</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Funded</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter(p => p.status === 'funded').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <span className="text-gray-600 text-2xl">❌</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter(p => p.status === 'rejected').length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => setShowProjectForm(true)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+            >
+              + Submit New Project
+            </button>
+            <button
+              onClick={() => router.push('/admin')}
+              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium"
+            >
+              Admin Panel
+            </button>
+          </div>
+        </div>
         <div className="space-y-8">
           <ProjectSubmissionForm onProjectSubmitted={() => setRefreshTrigger(prev => prev + 1)} />
           <ProjectList refreshTrigger={refreshTrigger} />

@@ -96,11 +96,13 @@ export interface Project {
   interval?: 'month' | 'year';
   gumroadLink?: string;
   deadline?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'funded';
   rejectionReason?: string;
   userId: string;
   createdAt: Date;
-  updatedAt: Date;
+  fundedAmount?: number;
+  hasFiles?: boolean;
+  fileCount?: number;
 }
 
 export interface GumroadCredentialsDoc {
@@ -282,5 +284,52 @@ export const getGumroadCredentials = async (userId: string) => {
     return { credentials: { email: data.email, password: data.password } as { email: string; password: string }, error: null };
   } catch (error: any) {
     return { credentials: null, error: error.message };
+  }
+};
+
+// Get all projects for a user
+export const getProjects = async (): Promise<Project[]> => {
+  try {
+    const projectsRef = collection(db, 'projects');
+    const q = query(projectsRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const projects: Project[] = [];
+    querySnapshot.forEach((doc) => {
+      projects.push({ id: doc.id, ...doc.data() } as Project);
+    });
+    
+    return projects;
+  } catch (error: any) {
+    console.error('Error getting projects:', error);
+    throw new Error('Failed to get projects');
+  }
+};
+
+// Get a single project by ID
+export const getProject = async (projectId: string): Promise<Project> => {
+  try {
+    const projectRef = doc(db, 'projects', projectId);
+    const projectSnap = await getDoc(projectRef);
+    
+    if (!projectSnap.exists()) {
+      throw new Error('Project not found');
+    }
+    
+    return { id: projectSnap.id, ...projectSnap.data() } as Project;
+  } catch (error: any) {
+    console.error('Error getting project:', error);
+    throw new Error('Failed to get project');
+  }
+};
+
+// Update project
+export const updateProject = async (projectId: string, updates: Partial<Project>): Promise<void> => {
+  try {
+    const projectRef = doc(db, 'projects', projectId);
+    await updateDoc(projectRef, updates);
+  } catch (error: any) {
+    console.error('Error updating project:', error);
+    throw new Error('Failed to update project');
   }
 };

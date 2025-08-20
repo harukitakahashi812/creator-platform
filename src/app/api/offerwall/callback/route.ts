@@ -1,111 +1,137 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/firebase'
+import { collection, doc, getDoc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore'
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-// Generic Offerwall postback endpoint
-// Compatible with most networks that send GET callbacks with query params
-// Example expected params (may vary by network):
-// user_id, transaction_id, offer_id, payout, currency, signature, ip, sub_id, click_id
+function firstNonEmpty(...vals: Array<string | null | undefined>) {
+  for (const v of vals) {
+    if (typeof v === 'string' && v.trim().length > 0) return v.trim()
+  }
+  return undefined
+}
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url)
+  const headers = req.headers
+
+  // Optional simple auth gate for callbacks
+  const expectedToken = process.env.OFFERWALL_CALLBACK_TOKEN
+  const provided = headers.get('authorization') || url.searchParams.get('token') || ''
+  if (expectedToken) {
+    const ok = provided === `Bearer ${expectedToken}` || provided === expectedToken
+    if (!ok) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
+  // Try to normalize common provider fields
+  const provider = firstNonEmpty(
+    url.searchParams.get('provider'),
+    url.searchParams.get('network'),
+  ) || 'unknown'
+
+  const userId = firstNonEmpty(
+    url.searchParams.get('user_id'),
+    url.searchParams.get('uid'),
+    url.searchParams.get('user'),
+    url.searchParams.get('playerid'),
+    url.searchParams.get('userid'),
+  )
+
+  const projectId = firstNonEmpty(
+    url.searchParams.get('subid'),
+    url.searchParams.get('sub_id'),
+    url.searchParams.get('s2'),
+    url.searchParams.get('aff_sub2'),
+    url.searchParams.get('project_id'),
+  )
+
+  const transactionId = firstNonEmpty(
+    url.searchParams.get('transaction_id'),
+    url.searchParams.get('tx'),
+    url.searchParams.get('conv_id'),
+    url.searchParams.get('click_id'),
+    url.searchParams.get('id'),
+  )
+
+  const payoutStr = firstNonEmpty(
+    url.searchParams.get('payout'),
+    url.searchParams.get('amount'),
+    url.searchParams.get('reward'),
+    url.searchParams.get('revenue'),
+  )
+  const payout = payoutStr ? Number(payoutStr) : 0
+
+  if (!userId || !transactionId) {
+    return NextResponse.json({ ok: false, error: 'Missing userId or transactionId' }, { status: 400 })
+  }
+
   try {
-    const url = new URL(request.url);
-    const params = Object.fromEntries(url.searchParams.entries());
+    // Idempotency key: provider:transactionId
+    const convId = `${provider}:${transactionId}`
+    const convRef = doc(collection(db, 'offer_conversions'), convId)
+    const existing = await getDoc(convRef)
 
-    // Identify user/conversion as best as we can from common fields
-    const userId = params.user_id || params.uid || params.user || params.sub_id || 'unknown';
-    const transactionId = params.transaction_id || params.tx_id || params.click_id || params.tid || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const offerId = params.offer_id || params.oid || params.campaign_id || 'unknown';
-    const payout = Number(params.payout || params.amount || 0);
-    const currency = params.currency || 'USD';
-
-    // Idempotency: use transactionId as the document id to avoid duplicates
-    const ref = doc(collection(db, 'offerwall_conversions'), transactionId);
-    const existing = await getDoc(ref);
     if (existing.exists()) {
-      // Already processed
-      return new NextResponse('OK', { status: 200 });
+      return NextResponse.json({ ok: true, duplicated: true })
     }
 
-    const record = {
-      userId,
+    const data = {
+      provider,
       transactionId,
-      offerId,
+      userId,
+      projectId: projectId || null,
       payout,
-      currency,
-      params,
-      sourceIp: request.headers.get('x-forwarded-for') || request.ip || '',
-      createdAt: new Date().toISOString(),
-    } as const;
+      createdAt: serverTimestamp(),
+    }
 
-    await setDoc(ref, record, { merge: true });
+    await setDoc(convRef, data)
 
-    // TODO: Optionally, increment a user balance or mark project funding
-    // For now, we just store the conversion event for reporting.
+    // If we have a projectId and payout, update funding on the project
+    if (projectId && payout > 0) {
+      const projectRef = doc(collection(db, 'projects'), projectId)
+      await updateDoc(projectRef, {
+        fundedAmount: increment(payout),
+        updatedAt: new Date(),
+      }).catch(() => {})
+    }
 
-    return new NextResponse('OK', { status: 200 });
-  } catch (error: any) {
-    console.error('Offerwall callback error:', error);
-    return new NextResponse('ERROR', { status: 500 });
+    return NextResponse.json({ ok: true })
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message || 'callback-failed' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  // Some networks POST JSON. Map JSON body to query-like handling.
   try {
-    // Try JSON body first
-    let params: Record<string, string> = {};
-    const contentType = request.headers.get('content-type') || '';
-    try {
-      if (contentType.includes('application/json')) {
-        const json = await request.json();
-        params = Object.fromEntries(Object.entries(json).map(([k, v]) => [k, String(v)]));
-      } else if (contentType.includes('application/x-www-form-urlencoded')) {
-        const text = await request.text();
-        const sp = new URLSearchParams(text);
-        params = Object.fromEntries(sp.entries());
-      } else {
-        // Fallback: treat as query string
-        const url = new URL(request.url);
-        params = Object.fromEntries(url.searchParams.entries());
-      }
-    } catch {
-      const url = new URL(request.url);
-      params = Object.fromEntries(url.searchParams.entries());
+    const headers = req.headers
+    const expectedToken = process.env.OFFERWALL_CALLBACK_TOKEN
+    const provided = headers.get('authorization') || ''
+    if (expectedToken) {
+      const ok = provided === `Bearer ${expectedToken}`
+      if (!ok) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userId = params.user_id || params.uid || params.user || params.sub_id || 'unknown';
-    const transactionId = params.transaction_id || params.tx_id || params.click_id || params.tid || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const offerId = params.offer_id || params.oid || params.campaign_id || 'unknown';
-    const payout = Number(params.payout || params.amount || 0);
-    const currency = params.currency || 'USD';
+    const body = await req.json().catch(() => ({})) as any
+    const qs = new URLSearchParams()
+    Object.entries(body || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) qs.set(k, String(v))
+    })
 
-    const ref = doc(collection(db, 'offerwall_conversions'), transactionId);
-    const existing = await getDoc(ref);
-    if (existing.exists()) {
-      return new NextResponse('OK', { status: 200 });
+    const url = new URL(req.url)
+    // Merge query string too (prefer body values)
+    for (const [k, v] of url.searchParams.entries()) {
+      if (!qs.has(k)) qs.set(k, v)
     }
 
-    const record = {
-      userId,
-      transactionId,
-      offerId,
-      payout,
-      currency,
-      params,
-      sourceIp: request.headers.get('x-forwarded-for') || request.ip || '',
-      createdAt: new Date().toISOString(),
-    } as const;
-
-    await setDoc(ref, record, { merge: true });
-    return new NextResponse('OK', { status: 200 });
-  } catch (error: any) {
-    console.error('Offerwall callback POST error:', error);
-    return new NextResponse('ERROR', { status: 500 });
+    const shimReq = new Request(url.toString() + (qs.toString() ? `?${qs.toString()}` : ''), { headers })
+    // Reuse GET handler logic by constructing a new NextRequest
+    // @ts-ignore
+    return GET(new NextRequest(shimReq))
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message || 'callback-failed' }, { status: 500 })
   }
 }
-
-
